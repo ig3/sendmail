@@ -2,24 +2,48 @@
 
 const mock = require('mock-require');
 let spawnArguments;
+let spawnThrow;
 let spawnError;
 let endMessage;
 let onExitCallback;
+let onErrorCallback;
 let sendmailExitCode = 0;
 mock('child_process', {
   spawn: function () {
-    if (spawnError) throw spawnError;
+    if (spawnThrow) {
+      throw spawnThrow;
+    }
+    if (spawnError) {
+      setTimeout(
+        () => {
+          if (onErrorCallback) {
+            onErrorCallback(spawnError);
+          } else {
+            throw spawnError;
+          }
+        },
+        10
+      );
+    }
     spawnArguments = arguments;
     return {
       on: function (event, callback) {
-        console.log('on ' + event);
-        onExitCallback = callback;
+        if (event === 'exit') {
+          onExitCallback = callback;
+        } else if (event === 'error') {
+          onErrorCallback = callback;
+        } else {
+          assert.fail('Unmocked event handler');
+        }
       },
       stdin: {
         end: function (msg) {
-          console.log('stdin.end');
           endMessage = msg;
-          onExitCallback(sendmailExitCode);
+          if (!spawnError && !spawnThrow) {
+            onExitCallback(sendmailExitCode);
+          } else {
+            console.log('end called. Not calling exit callback');
+          }
         },
       },
     };
@@ -38,10 +62,6 @@ t.test('mandatory options', async t => {
       to: 'to@example.com',
       subject: 'Test subject',
       body: 'This is the body',
-    })
-    .catch(err => {
-      console.log('err: ', err);
-      assert.fail('should not reject');
     });
   });
   await t.test('missing from option', t => {
@@ -95,12 +115,9 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
       assert.deepEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
       assert.equal(lines[1], 'From: from@example.com', 'line 2');
@@ -121,13 +138,9 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t', '-f', 'test@example.com'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
       assert.equal(lines[1], 'From: from@example.com', 'line 2');
@@ -148,13 +161,9 @@ t.test('sendmail command', async t => {
       bodyType: 'html',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 16, 'Message body is 16 lines');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
@@ -186,13 +195,9 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 22, 'Message body is 22 lines');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
@@ -230,13 +235,9 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary \nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 24, 'Message body is 24 lines');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
@@ -276,13 +277,9 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary\nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 24, 'Message body is 24 lines');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
@@ -328,13 +325,9 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary\nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 24, 'Message body is 24 lines');
       assert.equal(lines[0], 'To: to@example.com', 'line 1');
@@ -358,13 +351,9 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary\nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 25, 'Message body is 25 lines');
       assert.equal(lines[0], 'To: to1@example.com,', 'line 1');
@@ -390,13 +379,9 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary\nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], 'sendmail', 'sendmail path');
-      console.log('spawnArguments[1]: ', spawnArguments[1]);
       assert.deepStrictEqual(spawnArguments[1], ['-i', '-t'], 'args');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 26, 'Message body is 26 lines');
       assert.equal(lines[0], 'To: to1@example.com,', 'line 1');
@@ -416,7 +401,6 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary\nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
       assert.fail('should not resolve');
     })
     .catch(err => {
@@ -437,7 +421,6 @@ t.test('sendmail command', async t => {
       plaintext: 'This is the plain text\n--boundary\nMore plain text',
     })
     .then(() => {
-      console.log('promise resolved');
       assert.fail('should not resolve');
     })
     .catch(err => {
@@ -454,15 +437,9 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 8, 'Message body is 8 lines');
       assert.equal(lines[1], 'CC: cc@example.com', 'line 2');
-    })
-    .catch(err => {
-      console.log('err: ', err);
-      assert.fail('should not reject');
     });
   });
 
@@ -475,15 +452,9 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 8, 'Message body is 8 lines');
       assert.equal(lines[1], 'CC: cc@example.com', 'line 2');
-    })
-    .catch(err => {
-      console.log('err: ', err);
-      assert.fail('should not reject');
     });
   });
 
@@ -496,8 +467,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 7, 'Message body is 7 lines');
       assert.equal(lines[1], 'From: from@example.com', 'line 2');
@@ -513,8 +482,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 9, 'Message body is 9 lines');
       assert.equal(lines[1], 'CC: cc1@example.com,', 'line 2');
@@ -532,8 +499,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 10, 'Message body is 10 lines');
       assert.equal(lines[1], 'CC: cc1@example.com,', 'line 2');
@@ -552,15 +517,9 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 8, 'Message body is 8 lines');
       assert.equal(lines[1], 'BCC: bcc@example.com', 'line 2');
-    })
-    .catch(err => {
-      console.log('err: ', err);
-      assert.fail('should not reject');
     });
   });
 
@@ -573,15 +532,9 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 8, 'Message body is 8 lines');
       assert.equal(lines[1], 'BCC: bcc@example.com', 'line 2');
-    })
-    .catch(err => {
-      console.log('err: ', err);
-      assert.fail('should not reject');
     });
   });
 
@@ -594,8 +547,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 7, 'Message body is 7 lines');
       assert.equal(lines[1], 'From: from@example.com', 'line 2');
@@ -611,8 +562,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 9, 'Message body is 9 lines');
       assert.equal(lines[1], 'BCC: bcc1@example.com,', 'line 2');
@@ -630,8 +579,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .then(() => {
-      console.log('promise resolved');
-      console.log('endMessage: ' + endMessage);
       const lines = endMessage.split('\n');
       assert.equal(lines.length, 10, 'Message body is 10 lines');
       assert.equal(lines[1], 'BCC: bcc1@example.com,', 'line 2');
@@ -677,7 +624,6 @@ t.test('sendmail command', async t => {
       body: 'This is the body',
     })
     .catch(err => {
-      console.log('err: ', err);
       assert.deepEqual(err, new Error('Invalid envelopeFrom address'), 'error');
     });
   });
@@ -692,13 +638,12 @@ t.test('sendmail command', async t => {
       path: '/usr/bin/sendmail',
     })
     .then(() => {
-      console.log('spawnArguments: ', spawnArguments);
       assert.equal(spawnArguments.length, 2, 'arguments length');
       assert.equal(spawnArguments[0], '/usr/bin/sendmail', 'sendmail path');
     });
   });
 
-  await t.test('spawn  error', t => {
+  await t.test('spawn  spawnError', t => {
     spawnError = new Error('Something went wrong');
     return sendmail({
       from: 'from@example.com',
@@ -712,6 +657,24 @@ t.test('sendmail command', async t => {
     })
     .catch(err => {
       assert.deepEqual(err, new Error('Something went wrong'), 'error');
+    });
+  });
+
+  await t.test('spawn  spawnThrow', t => {
+    spawnError = undefined;
+    spawnThrow = new Error('Spawn throw error');
+    return sendmail({
+      from: 'from@example.com',
+      to: 'to@example.com',
+      subject: 'Test subject',
+      body: 'This is the body',
+      path: '/usr/bin/sendmail',
+    })
+    .then(() => {
+      assert.fail('should not resolve');
+    })
+    .catch(err => {
+      assert.deepEqual(err, new Error('Spawn throw error'), 'error');
     });
   });
 });

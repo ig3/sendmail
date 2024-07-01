@@ -42,6 +42,10 @@ module.exports = (options = {}) => {
           resolve();
         });
 
+        sendmail.on('error', err => {
+          reject(err);
+        });
+
         sendmail.stdin.end(composeMessage(options));
       } catch (err) {
         reject(err);
@@ -131,25 +135,20 @@ function composeMessage (options) {
     m.push(options.body);
     m.push('');
   }
-  console.log('m: ', JSON.stringify(m, null, 2));
   return m.join('\n');
 }
 
 function encodeBody (plaintext) {
-  console.log('plaintext: "' + plaintext + '"');
   const base64 = (Buffer.from(plaintext)).toString('base64');
   const len = base64.length;
-  console.log('len: ' + len);
   const size = 100;
   let start = 0;
   const lines = [];
 
   while (start < len) {
-    console.log('start: ' + start);
     lines.push(base64.substring(start, Math.min(len, start + size)));
     start += size;
   }
-  console.log('lines: ' + JSON.stringify(lines, null, 2));
   return lines.join('\n');
 }
 
@@ -163,17 +162,14 @@ function generateBoundary (options) {
 
 function boundaryInMessage (boundary, options) {
   let flag = false;
-  console.log('test boundary: "' + boundary + '"');
   if (options.plaintext) {
     options.plaintext.split('\n')
     .forEach(line => {
-      console.log('test line: "' + line + '"');
       if (line === '--' + boundary) {
         flag = true;
       }
     });
   }
-  console.log('boundaryInMessage: ' + flag);
   return flag;
 }
 
