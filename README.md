@@ -35,57 +35,68 @@ sendmail({
 });
 ```
 
-## Options
+## API
 
-### from
+### sendmail(options)
+
+The sendmail function requires an options object as sole argument.
+
+It returns a Promise that resolves after the email has been sent (i.e. the
+`sendmail` command has been run successfully to send the email, which may
+result in the email being queued rather than sent immediately, depending on
+the `sendmail` command implementation.
+
+#### options
+
+##### from
 
 The email address the email is to be from. This must be a single email
 address, as a string;
 
-### replayTo
+##### replayTo
 
 The email address that replies should be sent to. This must be a single
 email address, as a string.
 
-### to
+##### to
 
 The email addresses the email should be sent to. This may be a single email
 address as a string or an array of one or more email addresses.
 
-### cc
+##### cc
 
 Email addresses the email should be copied to. This may be a single email
 address as a string or an array of zero or more email addresses.
 
-### bcc
+##### bcc
 
 Email addresses the email should be blind copied to. This may be a single
 email address as a string or an array of zero or more email addresses.
 
-### subject
+##### subject
 
 The subject of the email, as a string.
 
-### path
+##### path
 
 Path to the `sendmail` command, as a string. Default is 'sendmail'.
 
-### envelopeFrom
+##### envelopeFrom
 
 The envelope from address, passed as value of option `-f` of the `sendmail`
 command, to set the envelope 'from' address, distinct from the header
 'From' address.
 
-### bodyType
+##### bodyType
 
 This may be set to 'html' to send a multipart email with an html part and
 optional plain text part (see plaintext).
 
-### body
+##### body
 
 This is the text of the body of the email as a string. 
 
-### plaintext
+##### plaintext
 
 This is the text of the plain text body of the email, as a string.
 

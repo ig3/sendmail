@@ -32,16 +32,20 @@ module.exports = (options = {}) => {
     }
 
     return new Promise((resolve, reject) => {
-      const sendmail = spawn(path, args);
+      try {
+        const sendmail = spawn(path, args);
 
-      sendmail.on('exit', (code) => {
-        if (code !== 0) {
-          reject(new Error('sendmail exited with code: ' + code));
-        }
-        resolve();
-      });
+        sendmail.on('exit', (code) => {
+          if (code !== 0) {
+            reject(new Error('sendmail exited with code: ' + code));
+          }
+          resolve();
+        });
 
-      sendmail.stdin.end(composeMessage(options));
+        sendmail.stdin.end(composeMessage(options));
+      } catch (err) {
+        reject(err);
+      }
     });
   });
 };

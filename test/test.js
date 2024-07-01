@@ -2,11 +2,13 @@
 
 const mock = require('mock-require');
 let spawnArguments;
+let spawnError;
 let endMessage;
 let onExitCallback;
 let sendmailExitCode = 0;
 mock('child_process', {
   spawn: function () {
+    if (spawnError) throw spawnError;
     spawnArguments = arguments;
     return {
       on: function (event, callback) {
@@ -677,6 +679,39 @@ t.test('sendmail command', async t => {
     .catch(err => {
       console.log('err: ', err);
       assert.deepEqual(err, new Error('Invalid envelopeFrom address'), 'error');
+    });
+  });
+
+  await t.test('sendmail path', t => {
+    sendmailExitCode = 0;
+    return sendmail({
+      from: 'from@example.com',
+      to: 'to@example.com',
+      subject: 'Test subject',
+      body: 'This is the body',
+      path: '/usr/bin/sendmail',
+    })
+    .then(() => {
+      console.log('spawnArguments: ', spawnArguments);
+      assert.equal(spawnArguments.length, 2, 'arguments length');
+      assert.equal(spawnArguments[0], '/usr/bin/sendmail', 'sendmail path');
+    });
+  });
+
+  await t.test('spawn  error', t => {
+    spawnError = new Error('Something went wrong');
+    return sendmail({
+      from: 'from@example.com',
+      to: 'to@example.com',
+      subject: 'Test subject',
+      body: 'This is the body',
+      path: '/usr/bin/sendmail',
+    })
+    .then(() => {
+      assert.fail('should not resolve');
+    })
+    .catch(err => {
+      assert.deepEqual(err, new Error('Something went wrong'), 'error');
     });
   });
 });
