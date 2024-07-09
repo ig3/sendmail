@@ -2,20 +2,15 @@
   "name": "@ig3/sendmail",
   "version": "0.0.4",
   "description": "Node interface to Linux sendmail command.",
-  "keywords": [
-    "email",
-    "sendmail",
-    "send email"
-  ],
+  "keywords": [],
   "repository": {
     "type": "git",
     "url": "git@github.com:ig3/sendmail.git"
   },
   "main": "index.js",
   "scripts": {
-    "test": "eslint . && c8 node --test"
+    "test": "eslint . && c8 multi-tape test/*.js"
   },
-  "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -24,6 +19,8 @@
   "devDependencies": {
     "@ig3/eslint-config-entrain": "^4.0.2",
     "c8": "^10.1.2",
-    "mock-require": "^3.0.3"
+    "mock-require": "^3.0.3",
+    "multi-tape": "^1.7.1",
+    "tape": "^5.8.1"
   }
 }
