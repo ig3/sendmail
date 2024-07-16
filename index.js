@@ -21,6 +21,9 @@ module.exports = (options = {}) => {
     if (!options.subject) {
       throw new Error('Missing subject');
     }
+    if (!options.body) {
+      throw new Error('Missing body');
+    }
 
     const path = options.path || 'sendmail';
     const args = ['-i', '-t'];

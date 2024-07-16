@@ -18,9 +18,9 @@
   },
   "devDependencies": {
     "@ig3/eslint-config-entrain": "^4.0.2",
+    "@ig3/test": "^0.0.8",
     "c8": "^10.1.2",
     "mock-require": "^3.0.3",
-    "multi-tape": "^1.7.1",
-    "tape": "^5.8.1"
+    "multi-tape": "^1.7.1"
   }
 }
